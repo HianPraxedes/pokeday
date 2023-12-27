@@ -1,0 +1,116 @@
+.container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background: linear-gradient(#00fa9a, #90ee90);
+  }
+  
+  .containerInput {
+    background-color: #00bfff;
+    padding: 15px;
+    margin: 34px 0;
+    display: flex;
+    border-radius: 8px;
+    box-shadow: 1px 3px 8px rgba(red, green, blue, alpha);
+  }
+  
+  .containerInput input {
+    background-color: transparent;
+    border: 0;
+    font-size: 20px;
+    color: #4682b4;
+    outline: none;
+    margin-right: 8px;
+  }
+  
+  .containerInput input::placeholder {
+    color: #f1f1f1;
+  }
+  
+  .buttonSearch {
+    background-color: transparent;
+    border: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.5s;
+  }
+  
+  .buttonSearch:hover {
+    transform: scale(1.2);
+  }
+  
+  .suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  li {
+    padding: 8px;
+    background-color: #e0e0e0;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .pokemonInfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #e0e0e0;
+    border-radius: 8px;
+  
+    img {
+      max-width: 100px;
+      max-height: 100px;
+    }
+  
+    .infoContainer {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+  
+    .infoBox {
+      text-align: center;
+    }
+  
+    .infoBox p {
+      margin: 4px;
+      background-color: #d3d3d3;
+      padding: 8px;
+      border-radius: 4px;
+    }
+  }
+  
+  @media (max-width: 620px) {
+    .pokemonInfo {
+      flex-direction: column;
+  
+      img {
+        margin-bottom: 10px;
+      }
+  
+      .infoContainer {
+        flex-direction: column;
+  
+        .infoBox p {
+          margin: 4px 0;
+        }
+      }
+    }
+  }
+  
