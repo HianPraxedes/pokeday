@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { TiSocialInstagramCircular } from 'react-icons/ti';
+import React, { useState, useEffect } from 'react';
+import { TiSocialInstagramCircular, TiArrowUpThick, TiArrowDownThick } from 'react-icons/ti';
 import './styles.css';
 
 import api from './services/api';
 
 function App() {
   const [input, setInput] = useState('');
-  const [pokemonData, setPokemonData] = useState(null);
+  const [pokemonDataList, setPokemonDataList] = useState([]);
   const [pokemonNames, setPokemonNames] = useState([]);
+  const [randomPokemon, setRandomPokemon] = useState(null);
 
   async function handleSearch() {
     if (input === '') {
@@ -16,23 +17,65 @@ function App() {
     }
 
     try {
-      const response = await api.get(`${input.toLowerCase()}`);
-      const data = {
-        height: response.data.height,
-        weight: response.data.weight,
-        name: capitalizeFirstLetter(response.data.name),  // Capitalize the first letter
-        game: response.data.game_indices[0].version.name,
+      const response = await api.get(`${input.toLowerCase()}/`);
+      const newPokemonData = {
+        height: response.data.height / 10,
+        weight: response.data.weight / 10,
+        name: capitalizeFirstLetter(response.data.name),
+        game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
         url: response.data.sprites.front_default,
-        type: [response.data.types[0].type.name],
+        type: [capitalizeFirstLetter(response.data.types[0].type.name)],
       };
 
       if (typeof response.data.types[1] !== 'undefined') {
-        data.type.push(response.data.types[1].type.name);
+        newPokemonData.type.push(capitalizeFirstLetter(response.data.types[1].type.name));
       } else {
-        data.type.push(response.data.types[0].type.name);
+        newPokemonData.type.push(capitalizeFirstLetter(response.data.types[0].type.name));
       }
 
-      setPokemonData(data);
+      if (randomPokemon) {
+        const heightMatch = newPokemonData.height === randomPokemon.height;
+        const weightMatch = newPokemonData.weight === randomPokemon.weight;
+        const nameMatch = newPokemonData.name === randomPokemon.name;
+        const gameMatch = newPokemonData.game === randomPokemon.game;
+        const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
+        const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
+
+        const isMatch =
+          heightMatch && weightMatch && nameMatch && gameMatch && type1Match && type2Match;
+
+        const bgColorClass = isMatch ? 'match' : 'no-match';
+        const textColorClass = isMatch ? 'text-match' : 'text-no-match';
+        const type1ColorClass = type1Match ? 'type-match' : 'type-no-match';
+        const type2ColorClass = type2Match ? 'type-match' : 'type-no-match';
+        const nameColorClass = nameMatch ? 'type-match' : 'type-no-match';
+        const gameColorClass = gameMatch ? 'type-match' : 'type-no-match';
+        const heightColorClass = heightMatch ? 'type-match' : 'type-no-match';
+        const weightColorClass = weightMatch ? 'type-match' : 'type-no-match';
+
+        newPokemonData.bgColorClass = bgColorClass;
+        newPokemonData.textColorClass = textColorClass;
+        newPokemonData.type1ColorClass = type1ColorClass;
+        newPokemonData.type2ColorClass = type2ColorClass;
+        newPokemonData.nameColorClass = nameColorClass;
+        newPokemonData.gameColorClass = gameColorClass;
+        newPokemonData.heightColorClass = heightColorClass;
+        newPokemonData.weightColorClass = weightColorClass;
+
+        newPokemonData.heightArrowIcon = (
+          <span className="arrow-icon">
+            {heightMatch ? null : newPokemonData.height < randomPokemon.height ? <TiArrowUpThick /> : <TiArrowDownThick />}
+          </span>
+        );
+        newPokemonData.weightArrowIcon = (
+          <span className="arrow-icon">
+            {weightMatch ? null : newPokemonData.weight < randomPokemon.weight ? <TiArrowUpThick /> : <TiArrowDownThick />}
+          </span>
+        );
+      }
+
+      setPokemonDataList((prevList) => [...prevList, newPokemonData]);
+      setInput('');
     } catch {
       alert('Deu erro mané');
     }
@@ -56,9 +99,7 @@ function App() {
       return;
     }
 
-    const response = await fetch(
-      'https://pokeapi.co/api/v2/pokemon/?offset=0&limit=1025'
-    );
+    const response = await fetch('https://pokeapi.co/api/v2/pokemon/?offset=0&limit=898');
     const data = await response.json();
     const pokemonResults = data.results;
 
@@ -76,10 +117,63 @@ function App() {
     setPokemonNames([]);
   }
 
+  useEffect(() => {
+    async function fetchRandomPokemon() {
+      try {
+        if (!randomPokemon) {
+          const maxRetries = 3;
+          let retryCount = 0;
+
+          while (retryCount < maxRetries) {
+            const randomPokemonId = Math.floor(Math.random() * 898);
+
+            try {
+              const response = await api.get(`/${randomPokemonId}/`);
+
+              const randomPokemonData = {
+                height: response.data.height / 10,
+                weight: response.data.weight / 10,
+                name: capitalizeFirstLetter(response.data.name),
+                game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
+                type: [capitalizeFirstLetter(response.data.types[0].type.name)],
+              };
+
+              if (typeof response.data.types[1] !== 'undefined') {
+                randomPokemonData.type.push(
+                  capitalizeFirstLetter(response.data.types[1].type.name)
+                );
+              } else {
+                randomPokemonData.type.push(
+                  capitalizeFirstLetter(response.data.types[0].type.name)
+                );
+              }
+              
+              console.log(randomPokemonData);
+
+              setRandomPokemon(randomPokemonData);
+              break;
+            } catch (error) {
+              console.error('Erro ao buscar Pokémon aleatório:', error);
+              retryCount++;
+            }
+          }
+
+          if (retryCount === maxRetries) {
+            console.error('Número máximo de tentativas atingido. Falha ao buscar Pokémon aleatório.');
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar Pokémon aleatório:', error);
+      }
+    }
+
+    fetchRandomPokemon();
+  }, [randomPokemon]);
+
   return (
     <div className="container">
       <h1>Pokéday</h1>
-  
+
       <div className="containerInput">
         <input
           type="text"
@@ -88,12 +182,12 @@ function App() {
           onChange={(e) => setInput(e.target.value)}
           onInput={handleInput}
         />
-  
+
         <button className="buttonSearch" onClick={handleSearch}>
           <TiSocialInstagramCircular size={25} color="#FF0000" />
         </button>
       </div>
-  
+
       <div className="suggestions">
         <ul>
           {pokemonNames.map((name) => (
@@ -103,38 +197,46 @@ function App() {
           ))}
         </ul>
       </div>
-  
-      {pokemonData && (
-        <div className="pokemonInfo">
-          <img src={pokemonData.url} alt={pokemonData.name} />
-          <div className="infoContainer">
-            <div className="infoBox">
-              <p>Name:</p>
-              <p>{pokemonData.name}</p>
-            </div>
-            <div className="infoBox">
-              <p>Game:</p>
-              <p>{pokemonData.game}</p>
-            </div>
-            <div className="infoBox">
-              <p>Height:</p>
-              <p>{pokemonData.height}</p>
-            </div>
-            <div className="infoBox">
-              <p>Weight:</p>
-              <p>{pokemonData.weight}</p>
-            </div>
-            <div className="infoBox">
-              <p>Type 1:</p>
-              <p>{pokemonData.type[0]}</p>
-            </div>
-            <div className="infoBox">
-              <p>Type 2:</p>
-              <p>{pokemonData.type[1]}</p>
+
+      <div className="pokemonList">
+        {pokemonDataList.slice().reverse().map((pokemonData, index) => (
+          <div key={index} className={`pokemonInfo ${pokemonData.bgColorClass}`}>
+            <img src={pokemonData.url} alt={pokemonData.name} />
+            <div className="infoContainer">
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.nameColorClass}`}>
+                <p className={pokemonData.nameColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Nome</p>
+                <p className={pokemonData.nameColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.name}</p>
+              </div>
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.gameColorClass}`}>
+                <p className={pokemonData.gameColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Jogo</p>
+                <p className={pokemonData.gameColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.game}</p>
+              </div>
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.heightColorClass}`}>
+                <p className={pokemonData.heightColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Altura</p>
+                <p className={pokemonData.heightColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.height} M{pokemonData.heightArrowIcon}</p>
+              </div>
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.weightColorClass}`}>
+                <p className={pokemonData.weightColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Peso</p>
+                <p className={pokemonData.weightColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.weight} Kg{pokemonData.weightArrowIcon}</p>
+              </div>
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.type1ColorClass}`}>
+                <p className={pokemonData.type1ColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Tipo 1</p>
+                <p className={pokemonData.type1ColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.type[0]}</p>
+              </div>
+
+              <div className={`infoBox ${pokemonData.textColorClass} ${pokemonData.type2ColorClass}`}>
+                <p className={pokemonData.type2ColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>Tipo 2</p>
+                <p className={pokemonData.type2ColorClass === 'type-match' ? 'background-match' : 'background-no-match'}>{pokemonData.type[1]}</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
