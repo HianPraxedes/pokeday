@@ -3,6 +3,8 @@ import { TiSocialInstagramCircular, TiArrowUpThick, TiArrowDownThick } from 'rea
 import './styles.css';
 import logo from './assets/logo.png';
 import api from './services/api';
+import firebase from 'firebase/compat/app'; // Importe compat/app
+import 'firebase/compat/database'; // Importe compat/database
 
 function App() {
   const [input, setInput] = useState('');
@@ -12,103 +14,139 @@ function App() {
   const [correctGuess, setCorrectGuess] = useState(false);
   const [attempts, setAttempts] = useState(0);
 
-  async function handleSearch() {
-    if (input === '') {
-      alert('Escreva um Pokémon');
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7dfS8sMmblgpC29lp0yzhMM-qbPFe19U",
+    authDomain: "pokeday-95320.firebaseapp.com",
+    databaseURL: "https://pokeday-95320-default-rtdb.firebaseio.com",
+    projectId: "pokeday-95320",
+    storageBucket: "pokeday-95320.appspot.com",
+    messagingSenderId: "1083376538339",
+    appId: "1:1083376538339:web:71a8706a9e072a65ed6bd6",
+    measurementId: "G-4HP8CJ7Z17"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  const db = firebase.database();
+
+async function handleSearch() {
+  if (input === '') {
+    alert('Escreva um Pokémon');
+    return;
+  }
+
+  try {
+    // Verificar se já houve uma tentativa no dia atual
+    const today = new Date();
+    const dayIndex = today.getDay();
+    const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const currentDay = daysOfWeek[dayIndex];
+    
+    const attemptsRef = db.ref(`attempts/${currentDay}`);
+    const snapshot = await attemptsRef.once('value');
+    const attemptsData = snapshot.val();
+
+    if (attemptsData && attemptsData.attempted) {
+      alert('Você já tentou adivinhar um Pokémon hoje. Tente novamente amanhã!');
       return;
     }
 
-    try {
-      const response = await api.get(`${input.toLowerCase()}/`);
-      const newPokemonData = {
-        height: response.data.height / 10,
-        weight: response.data.weight / 10,
-        name: capitalizeFirstLetter(response.data.name),
-        game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
-        url: response.data.sprites.front_default,
-        type: [capitalizeFirstLetter(response.data.types[0].type.name)],
-      };
+    // Se não houve tentativa hoje, continuar com a lógica normal de pesquisa
+    const response = await api.get(`${input.toLowerCase()}/`);
+    const newPokemonData = {
+      height: response.data.height / 10,
+      weight: response.data.weight / 10,
+      name: capitalizeFirstLetter(response.data.name),
+      game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
+      url: response.data.sprites.front_default,
+      type: [capitalizeFirstLetter(response.data.types[0].type.name)],
+    };
 
-      if (typeof response.data.types[1] !== 'undefined') {
-        newPokemonData.type.push(
-          capitalizeFirstLetter(response.data.types[1].type.name)
-        );
-      } else {
-        newPokemonData.type.push(
-          capitalizeFirstLetter(response.data.types[0].type.name)
-        );
-      }
-
-      if (randomPokemon) {
-        const heightMatch = newPokemonData.height === randomPokemon.height;
-        const weightMatch = newPokemonData.weight === randomPokemon.weight;
-        const nameMatch = newPokemonData.name === randomPokemon.name;
-        const gameMatch = newPokemonData.game === randomPokemon.game;
-        const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
-        const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
-
-        const isMatch =
-          heightMatch &&
-          weightMatch &&
-          nameMatch &&
-          gameMatch &&
-          type1Match &&
-          type2Match;
-
-        const bgColorClass = isMatch ? 'match' : 'no-match';
-        const textColorClass = isMatch ? 'text-match' : 'text-no-match';
-        const type1ColorClass = type1Match ? 'type-match' : 'type-no-match';
-        const type2ColorClass = type2Match ? 'type-match' : 'type-no-match';
-        const nameColorClass = nameMatch ? 'type-match' : 'type-no-match';
-        const gameColorClass = gameMatch ? 'type-match' : 'type-no-match';
-        const heightColorClass = heightMatch ? 'type-match' : 'type-no-match';
-        const weightColorClass = weightMatch ? 'type-match' : 'type-no-match';
-
-        newPokemonData.bgColorClass = bgColorClass;
-        newPokemonData.textColorClass = textColorClass;
-        newPokemonData.type1ColorClass = type1ColorClass;
-        newPokemonData.type2ColorClass = type2ColorClass;
-        newPokemonData.nameColorClass = nameColorClass;
-        newPokemonData.gameColorClass = gameColorClass;
-        newPokemonData.heightColorClass = heightColorClass;
-        newPokemonData.weightColorClass = weightColorClass;
-
-        newPokemonData.heightArrowIcon = (
-          <span className="arrow-icon">
-            {heightMatch ? null : newPokemonData.height < randomPokemon.height ? (
-              <TiArrowUpThick />
-            ) : (
-              <TiArrowDownThick />
-            )}
-          </span>
-        );
-        newPokemonData.weightArrowIcon = (
-          <span className="arrow-icon">
-            {weightMatch ? null : newPokemonData.weight < randomPokemon.weight ? (
-              <TiArrowUpThick />
-            ) : (
-              <TiArrowDownThick />
-            )}
-          </span>
-        );
-
-        // Update the state when the guess is correct
-        if (isMatch) {
-          setCorrectGuess(true);
-          setAttempts((prevAttempts) => prevAttempts + 1);
-        }
-      }
-
-      setPokemonDataList((prevList) => [...prevList, newPokemonData]);
-
-      // Clear input only if the guess is not correct
-      if (!correctGuess) {
-        setInput('');
-      }
-    } catch {
-      alert('Deu erro mané');
+    if (typeof response.data.types[1] !== 'undefined') {
+      newPokemonData.type.push(
+        capitalizeFirstLetter(response.data.types[1].type.name)
+      );
+    } else {
+      newPokemonData.type.push(
+        capitalizeFirstLetter(response.data.types[0].type.name)
+      );
     }
+
+    if (randomPokemon) {
+      const heightMatch = newPokemonData.height === randomPokemon.height;
+      const weightMatch = newPokemonData.weight === randomPokemon.weight;
+      const nameMatch = newPokemonData.name === randomPokemon.name;
+      const gameMatch = newPokemonData.game === randomPokemon.game;
+      const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
+      const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
+
+      const isMatch =
+        heightMatch &&
+        weightMatch &&
+        nameMatch &&
+        gameMatch &&
+        type1Match &&
+        type2Match;
+
+      const bgColorClass = isMatch ? 'match' : 'no-match';
+      const textColorClass = isMatch ? 'text-match' : 'text-no-match';
+      const type1ColorClass = type1Match ? 'type-match' : 'type-no-match';
+      const type2ColorClass = type2Match ? 'type-match' : 'type-no-match';
+      const nameColorClass = nameMatch ? 'type-match' : 'type-no-match';
+      const gameColorClass = gameMatch ? 'type-match' : 'type-no-match';
+      const heightColorClass = heightMatch ? 'type-match' : 'type-no-match';
+      const weightColorClass = weightMatch ? 'type-match' : 'type-no-match';
+
+      newPokemonData.bgColorClass = bgColorClass;
+      newPokemonData.textColorClass = textColorClass;
+      newPokemonData.type1ColorClass = type1ColorClass;
+      newPokemonData.type2ColorClass = type2ColorClass;
+      newPokemonData.nameColorClass = nameColorClass;
+      newPokemonData.gameColorClass = gameColorClass;
+      newPokemonData.heightColorClass = heightColorClass;
+      newPokemonData.weightColorClass = weightColorClass;
+
+      newPokemonData.heightArrowIcon = (
+        <span className="arrow-icon">
+          {heightMatch ? null : newPokemonData.height < randomPokemon.height ? (
+            <TiArrowUpThick />
+          ) : (
+            <TiArrowDownThick />
+          )}
+        </span>
+      );
+      newPokemonData.weightArrowIcon = (
+        <span className="arrow-icon">
+          {weightMatch ? null : newPokemonData.weight < randomPokemon.weight ? (
+            <TiArrowUpThick />
+          ) : (
+            <TiArrowDownThick />
+          )}
+        </span>
+      );
+
+      // Update the state when the guess is correct
+      if (isMatch) {
+        setCorrectGuess(true);
+        setAttempts((prevAttempts) => prevAttempts + 1);
+      }
+    }
+
+    setPokemonDataList((prevList) => [...prevList, newPokemonData]);
+
+    // Clear input only if the guess is not correct
+    if (!correctGuess) {
+      setInput('');
+    }
+
+    // Marcar que houve uma tentativa no dia atual
+    await attemptsRef.set({ attempted: true });
+  } catch {
+    alert('Deu erro mané');
   }
+}
 
   function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -150,64 +188,30 @@ function App() {
     async function fetchRandomPokemon() {
       try {
         if (!randomPokemon) {
-          const maxRetries = 3;
-          let retryCount = 0;
+          const today = new Date();
+          const dayIndex = today.getDay();
+          const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+          const currentDay = daysOfWeek[dayIndex];
 
-          while (retryCount < maxRetries) {
-            const randomPokemonId = Math.floor(Math.random() * 898);
+          const pokemonRef = db.ref(`pokemons/${currentDay}`);
 
-            try {
-              const response = await api.get(`/${randomPokemonId}/`);
-
-              const randomPokemonData = {
-                height: response.data.height / 10,
-                weight: response.data.weight / 10,
-                name: capitalizeFirstLetter(response.data.name),
-                game: capitalizeFirstLetter(
-                  response.data.game_indices[0].version.name
-                ),
-                type: [
-                  capitalizeFirstLetter(response.data.types[0].type.name),
-                ],
-              };
-
-              if (typeof response.data.types[1] !== 'undefined') {
-                randomPokemonData.type.push(
-                  capitalizeFirstLetter(response.data.types[1].type.name)
-                );
-              } else {
-                randomPokemonData.type.push(
-                  capitalizeFirstLetter(response.data.types[0].type.name)
-                );
-              }
-
-              setRandomPokemon(randomPokemonData);
-              break;
-            } catch (error) {
-              console.error(
-                'Erro ao buscar Pokémon aleatório:',
-                error
-              );
-              retryCount++;
-            }
-          }
-
-          if (retryCount === maxRetries) {
-            console.error(
-              'Número máximo de tentativas atingido. Falha ao buscar Pokémon aleatório.'
-            );
-          }
+          pokemonRef.limitToFirst(1).once('value', (snapshot) => {
+            snapshot.forEach((childSnapshot) => {
+              const pokemonData = childSnapshot.val();
+              setRandomPokemon(pokemonData);
+            });
+          });
         }
       } catch (error) {
         console.error(
-          'Erro ao buscar Pokémon aleatório:',
+          'Erro ao buscar Pokémon do dia:',
           error
         );
       }
     }
 
     fetchRandomPokemon();
-  }, [randomPokemon]);
+  }, [randomPokemon, db]);
 
   useEffect(() => {
     if (correctGuess) {
