@@ -31,122 +31,103 @@ function App() {
 
   const db = firebase.database();
 
-async function handleSearch() {
-  if (input === '') {
-    alert('Escreva um Pokémon');
-    return;
-  }
-
-  try {
-    // Verificar se já houve uma tentativa no dia atual
-    const today = new Date();
-    const dayIndex = today.getDay();
-    const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    const currentDay = daysOfWeek[dayIndex];
-    
-    const attemptsRef = db.ref(`attempts/${currentDay}`);
-    const snapshot = await attemptsRef.once('value');
-    const attemptsData = snapshot.val();
-
-    if (attemptsData && attemptsData.attempted) {
-      alert('Você já tentou adivinhar um Pokémon hoje. Tente novamente amanhã!');
+  async function handleSearch() {
+    if (input === '') {
+      alert('Escreva um Pokémon');
       return;
     }
 
-    // Se não houve tentativa hoje, continuar com a lógica normal de pesquisa
-    const response = await api.get(`${input.toLowerCase()}/`);
-    const newPokemonData = {
-      height: response.data.height / 10,
-      weight: response.data.weight / 10,
-      name: capitalizeFirstLetter(response.data.name),
-      game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
-      url: response.data.sprites.front_default,
-      type: [capitalizeFirstLetter(response.data.types[0].type.name)],
-    };
+    try {
+      const response = await api.get(`${input.toLowerCase()}/`);
+      const newPokemonData = {
+        height: response.data.height / 10,
+        weight: response.data.weight / 10,
+        name: capitalizeFirstLetter(response.data.name),
+        game: capitalizeFirstLetter(response.data.game_indices[0].version.name),
+        url: response.data.sprites.front_default,
+        type: [capitalizeFirstLetter(response.data.types[0].type.name)],
+      };
 
-    if (typeof response.data.types[1] !== 'undefined') {
-      newPokemonData.type.push(
-        capitalizeFirstLetter(response.data.types[1].type.name)
-      );
-    } else {
-      newPokemonData.type.push(
-        capitalizeFirstLetter(response.data.types[0].type.name)
-      );
-    }
-
-    if (randomPokemon) {
-      const heightMatch = newPokemonData.height === randomPokemon.height;
-      const weightMatch = newPokemonData.weight === randomPokemon.weight;
-      const nameMatch = newPokemonData.name === randomPokemon.name;
-      const gameMatch = newPokemonData.game === randomPokemon.game;
-      const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
-      const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
-
-      const isMatch =
-        heightMatch &&
-        weightMatch &&
-        nameMatch &&
-        gameMatch &&
-        type1Match &&
-        type2Match;
-
-      const bgColorClass = isMatch ? 'match' : 'no-match';
-      const textColorClass = isMatch ? 'text-match' : 'text-no-match';
-      const type1ColorClass = type1Match ? 'type-match' : 'type-no-match';
-      const type2ColorClass = type2Match ? 'type-match' : 'type-no-match';
-      const nameColorClass = nameMatch ? 'type-match' : 'type-no-match';
-      const gameColorClass = gameMatch ? 'type-match' : 'type-no-match';
-      const heightColorClass = heightMatch ? 'type-match' : 'type-no-match';
-      const weightColorClass = weightMatch ? 'type-match' : 'type-no-match';
-
-      newPokemonData.bgColorClass = bgColorClass;
-      newPokemonData.textColorClass = textColorClass;
-      newPokemonData.type1ColorClass = type1ColorClass;
-      newPokemonData.type2ColorClass = type2ColorClass;
-      newPokemonData.nameColorClass = nameColorClass;
-      newPokemonData.gameColorClass = gameColorClass;
-      newPokemonData.heightColorClass = heightColorClass;
-      newPokemonData.weightColorClass = weightColorClass;
-
-      newPokemonData.heightArrowIcon = (
-        <span className="arrow-icon">
-          {heightMatch ? null : newPokemonData.height < randomPokemon.height ? (
-            <TiArrowUpThick />
-          ) : (
-            <TiArrowDownThick />
-          )}
-        </span>
-      );
-      newPokemonData.weightArrowIcon = (
-        <span className="arrow-icon">
-          {weightMatch ? null : newPokemonData.weight < randomPokemon.weight ? (
-            <TiArrowUpThick />
-          ) : (
-            <TiArrowDownThick />
-          )}
-        </span>
-      );
-
-      // Update the state when the guess is correct
-      if (isMatch) {
-        setCorrectGuess(true);
-        setAttempts((prevAttempts) => prevAttempts + 1);
+      if (typeof response.data.types[1] !== 'undefined') {
+        newPokemonData.type.push(
+          capitalizeFirstLetter(response.data.types[1].type.name)
+        );
+      } else {
+        newPokemonData.type.push(
+          capitalizeFirstLetter(response.data.types[0].type.name)
+        );
       }
+
+      if (randomPokemon) {
+        const heightMatch = newPokemonData.height === randomPokemon.height;
+        const weightMatch = newPokemonData.weight === randomPokemon.weight;
+        const nameMatch = newPokemonData.name === randomPokemon.name;
+        const gameMatch = newPokemonData.game === randomPokemon.game;
+        const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
+        const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
+
+        const isMatch =
+          heightMatch &&
+          weightMatch &&
+          nameMatch &&
+          gameMatch &&
+          type1Match &&
+          type2Match;
+
+        const bgColorClass = isMatch ? 'match' : 'no-match';
+        const textColorClass = isMatch ? 'text-match' : 'text-no-match';
+        const type1ColorClass = type1Match ? 'type-match' : 'type-no-match';
+        const type2ColorClass = type2Match ? 'type-match' : 'type-no-match';
+        const nameColorClass = nameMatch ? 'type-match' : 'type-no-match';
+        const gameColorClass = gameMatch ? 'type-match' : 'type-no-match';
+        const heightColorClass = heightMatch ? 'type-match' : 'type-no-match';
+        const weightColorClass = weightMatch ? 'type-match' : 'type-no-match';
+
+        newPokemonData.bgColorClass = bgColorClass;
+        newPokemonData.textColorClass = textColorClass;
+        newPokemonData.type1ColorClass = type1ColorClass;
+        newPokemonData.type2ColorClass = type2ColorClass;
+        newPokemonData.nameColorClass = nameColorClass;
+        newPokemonData.gameColorClass = gameColorClass;
+        newPokemonData.heightColorClass = heightColorClass;
+        newPokemonData.weightColorClass = weightColorClass;
+
+        newPokemonData.heightArrowIcon = (
+          <span className="arrow-icon">
+            {heightMatch ? null : newPokemonData.height < randomPokemon.height ? (
+              <TiArrowUpThick />
+            ) : (
+              <TiArrowDownThick />
+            )}
+          </span>
+        );
+        newPokemonData.weightArrowIcon = (
+          <span className="arrow-icon">
+            {weightMatch ? null : newPokemonData.weight < randomPokemon.weight ? (
+              <TiArrowUpThick />
+            ) : (
+              <TiArrowDownThick />
+            )}
+          </span>
+        );
+
+        // Update the state when the guess is correct
+        if (isMatch) {
+          setCorrectGuess(true);
+          setAttempts((prevAttempts) => prevAttempts + 1);
+        }
+      }
+
+      setPokemonDataList((prevList) => [...prevList, newPokemonData]);
+
+      // Clear input only if the guess is not correct
+      if (!correctGuess) {
+        setInput('');
+      }
+    } catch {
+      alert('Deu erro mané');
     }
-
-    setPokemonDataList((prevList) => [...prevList, newPokemonData]);
-
-    // Clear input only if the guess is not correct
-    if (!correctGuess) {
-      setInput('');
-    }
-
-    // Marcar que houve uma tentativa no dia atual
-    await attemptsRef.set({ attempted: true });
-  } catch {
-    alert('Deu erro mané');
   }
-}
 
   function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
