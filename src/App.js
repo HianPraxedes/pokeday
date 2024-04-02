@@ -3,8 +3,8 @@ import { TiSocialInstagramCircular, TiArrowUpThick, TiArrowDownThick } from 'rea
 import './styles.css';
 import logo from './assets/logo.png';
 import api from './services/api';
-import firebase from 'firebase/compat/app'; // Importe compat/app
-import 'firebase/compat/database'; // Importe compat/database
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/database';
 
 function App() {
   const [input, setInput] = useState('');
@@ -13,6 +13,9 @@ function App() {
   const [randomPokemon, setRandomPokemon] = useState(null);
   const [correctGuess, setCorrectGuess] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [guessedPokemon, setGuessedPokemon] = useState(null);
+  const [guessedToday, setGuessedToday] = useState(false);
 
   const firebaseConfig = {
     apiKey: "AIzaSyD7dfS8sMmblgpC29lp0yzhMM-qbPFe19U",
@@ -24,12 +27,15 @@ function App() {
     appId: "1:1083376538339:web:71a8706a9e072a65ed6bd6",
     measurementId: "G-4HP8CJ7Z17"
   };
-
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
 
   const db = firebase.database();
+
+  useEffect(() => {
+    checkIfGuessedToday();
+  }, []);
 
   async function handleSearch() {
     if (input === '') {
@@ -38,6 +44,12 @@ function App() {
     }
 
     try {
+      if (guessedToday) {
+        setInput('');
+        setModalOpen(true);
+        return;
+      }
+
       const response = await api.get(`${input.toLowerCase()}/`);
       const newPokemonData = {
         height: response.data.height / 10,
@@ -111,19 +123,24 @@ function App() {
           </span>
         );
 
-        // Update the state when the guess is correct
         if (isMatch) {
           setCorrectGuess(true);
           setAttempts((prevAttempts) => prevAttempts + 1);
+
+          const today = new Date().toISOString().split('T')[0];
+          localStorage.setItem('lastGuessData', JSON.stringify({ date: today, guessed: true }));
+
+          setGuessedPokemon(newPokemonData);
+          setModalOpen(true);
         }
       }
 
       setPokemonDataList((prevList) => [...prevList, newPokemonData]);
 
-      // Clear input only if the guess is not correct
       if (!correctGuess) {
         setInput('');
       }
+
     } catch {
       alert('Deu erro mané');
     }
@@ -194,12 +211,24 @@ function App() {
     fetchRandomPokemon();
   }, [randomPokemon, db]);
 
-  useEffect(() => {
-    if (correctGuess) {
-      alert(`Parabéns! Você acertou o Pokémon`);
-      setCorrectGuess(false); // Set it back to false after displaying the alert
+  function checkIfGuessedToday() {
+    const today = new Date().toISOString().split('T')[0];
+    const lastGuessData = JSON.parse(localStorage.getItem('lastGuessData'));
+    const hasGuessedToday = lastGuessData && lastGuessData.date === today && lastGuessData.guessed;
+
+    if (hasGuessedToday) {
+      setCorrectGuess(true);
+    } else {
+      setCorrectGuess(false);
     }
-  }, [correctGuess, attempts]);
+
+    // Reset correct guess if it's a new day
+    if (lastGuessData && lastGuessData.date !== today) {
+      setCorrectGuess(false);
+    }
+
+    setGuessedToday(hasGuessedToday);
+  }
 
   return (
     <div className="container">
@@ -380,6 +409,21 @@ function App() {
           </div>
         ))}
       </div>
+
+      {modalOpen && guessedPokemon && (
+        <div className="modal">
+          <div className="modal-content">
+            <span className="close" onClick={() => setModalOpen(false)}>&times;</span>
+            {guessedPokemon && (
+              <>
+                <img src={guessedPokemon.url} alt={guessedPokemon.name} />
+                <h2>Parabéns!</h2>
+                <p>Você acertou o Pokémon {guessedPokemon.name}!</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
