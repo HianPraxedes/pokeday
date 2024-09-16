@@ -75,9 +75,8 @@ function App() {
         const weightMatch = newPokemonData.weight === randomPokemon.weight;
         const nameMatch = newPokemonData.name === randomPokemon.name;
         const gameMatch = newPokemonData.game === randomPokemon.game;
-        const type1Match = newPokemonData.type[0] === randomPokemon.type[0];
-        const type2Match = newPokemonData.type[1] === randomPokemon.type[1];
-
+        const type1Match = newPokemonData.type[0].toLowerCase() === randomPokemon.type[0].toLowerCase();
+        const type2Match = newPokemonData.type[1].toLowerCase() === randomPokemon.type[1].toLowerCase();
         const isMatch =
           heightMatch &&
           weightMatch &&
@@ -193,24 +192,41 @@ function App() {
 
           const pokemonRef = db.ref(`pokemons/${currentDay}`);
 
-          pokemonRef.limitToFirst(1).once('value', (snapshot) => {
-            snapshot.forEach((childSnapshot) => {
-              const pokemonData = childSnapshot.val();
-              setRandomPokemon(pokemonData);
-            });
+          // Puxando os dados do banco
+          pokemonRef.limitToFirst(6).once('value', (snapshot) => {
+            const pokemonSnapshot = snapshot.val(); // Pega o valor do snapshot
+
+            if (pokemonSnapshot) {
+              // Organizar os detalhes, verificando se os dados estão presentes
+              const pokemonDetails = {
+                name: pokemonSnapshot.name || 'Desconhecido',
+                height: pokemonSnapshot.height || 'N/A',
+                weight: pokemonSnapshot.weight || 'N/A',
+                game: pokemonSnapshot.game || 'Desconhecido',
+                url: pokemonSnapshot.url || '',
+                type: Array.isArray(pokemonSnapshot.type)
+                  ? [
+                      pokemonSnapshot.type[0] || 'Desconhecido',
+                      pokemonSnapshot.type[1] || 'Desconhecido'
+                    ]
+                  : ['Desconhecido', 'Desconhecido'],
+              };
+
+              // Log dos detalhes organizados
+
+              setRandomPokemon(pokemonDetails); // Atualiza o estado com os dados
+            } else {
+            }
           });
         }
       } catch (error) {
-        console.error(
-          'Erro ao buscar Pokémon do dia:',
-          error
-        );
+        console.error('Erro ao buscar Pokémon do dia:', error);
       }
     }
 
     fetchRandomPokemon();
   }, [randomPokemon, db]);
-
+  
   function checkIfGuessedToday() {
     const today = new Date().toISOString().split('T')[0];
     const lastGuessData = JSON.parse(localStorage.getItem('lastGuessData'));
