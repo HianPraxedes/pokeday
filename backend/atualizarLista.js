@@ -36,7 +36,7 @@ function capitalizeFirstLetter(string) {
 
 // Função para buscar um Pokémon aleatório
 async function getRandomPokemon() {
-  const randomId = Math.floor(Math.random() * 890) + 1; // Gera um número entre 1 e 898
+  const randomId = Math.floor(Math.random() * 649) + 1; // Gera um número entre 1 e 898
   const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
 
   const types = response.data.types.map((t) => capitalizeFirstLetter(t.type.name));
